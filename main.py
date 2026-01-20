@@ -18,23 +18,51 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     st.subheader("Selected Documents")
-    
+
     # Track file names for merged PDF
     pdf_names = []
-    
+
     # Display each file with page count
-    for file in uploaded_files:
-        reader = PdfReader(file)
+    for pdf in uploaded_files:
+        reader = PdfReader(pdf)
         page_count = len(reader.pages)
-        pdf_names.append(file.name.replace(".pdf", ""))
-        st.info(f"**{file.name}** — `{page_count} pages`")
-    
+        pdf_names.append(pdf.name.replace(".pdf", ""))
+        st.info(f"**{pdf.name}** — `{page_count} pages`")
+
     # --- 2. Merge Button ---
     if st.button("Merge Documents"):
         merger = PdfWriter()
-        
+
         with st.spinner("Merging your files..."):
             try:
+                # Append PDFs
+                for pdf in uploaded_files:
+                    reader = PdfReader(pdf)
+                    merger.append(reader)
+
+                # Save merged PDF to memory
+                output_buffer = io.BytesIO()
+                merger.write(output_buffer)
+
+                # --- 3. Create Safe Filename ---
+                safe_names = [re.sub(r'\W+', '', name) for name in pdf_names]
+                unique_name = f"merged_{'_'.join(safe_names)}.pdf"
+
+                st.success("✅ Files merged successfully!")
+
+                # --- 4. Download Button ---
+                st.download_button(
+                    label="Download Merged PDF",
+                    data=output_buffer.getvalue(),
+                    file_name=unique_name,
+                    mime="application/pdf"
+                )
+
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+
+else:
+    st.info("Please upload one or more PDF files to begin.")            try:
                 # Append PDFs
                 for pdf in uploaded_files:
                     reader = PdfReader(pdf)
