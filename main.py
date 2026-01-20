@@ -7,7 +7,7 @@ import re
 st.set_page_config(page_title="PDF Merger Pro", page_icon="📄")
 
 st.title("📄 PDF Document Merger")
-st.write("Upload your PDFs in the order you want them merged.")
+st.write("Upload your PDFs and drag to reorder before merging.")
 
 # --- 1. File Uploader ---
 uploaded_files = st.file_uploader(
@@ -17,26 +17,41 @@ uploaded_files = st.file_uploader(
 )
 
 if uploaded_files:
-    st.subheader("Selected Documents")
+    # --- 2. Display and Reorder PDFs ---
+    st.subheader("Selected Documents (Drag to reorder)")
 
-    # Track file names for merged PDF
-    pdf_names = []
+    # Extract names and store UploadedFile objects
+    pdf_list = [{"name": file.name, "file": file} for file in uploaded_files]
 
-    # Display each file with page count
-    for pdf in uploaded_files:
-        reader = PdfReader(pdf)
+    # Show reorderable list using Streamlit's experimental container
+    reordered_names = st.multiselect(
+        "Drag to reorder (top = first page):",
+        options=[p["name"] for p in pdf_list],
+        default=[p["name"] for p in pdf_list]
+    )
+
+    # Map reordered names back to files
+    ordered_files = []
+    for name in reordered_names:
+        for p in pdf_list:
+            if p["name"] == name:
+                ordered_files.append(p["file"])
+                break
+
+    # Display page counts
+    for file in ordered_files:
+        reader = PdfReader(file)
         page_count = len(reader.pages)
-        pdf_names.append(pdf.name.replace(".pdf", ""))
-        st.info(f"**{pdf.name}** — `{page_count} pages`")
+        st.info(f"**{file.name}** — `{page_count} pages`")
 
-    # --- 2. Merge Button ---
+    # --- 3. Merge Button ---
     if st.button("Merge Documents"):
         merger = PdfWriter()
 
         with st.spinner("Merging your files..."):
             try:
-                # Append PDFs
-                for pdf in uploaded_files:
+                # Append PDFs in custom order
+                for pdf in ordered_files:
                     reader = PdfReader(pdf)
                     merger.append(reader)
 
@@ -44,13 +59,13 @@ if uploaded_files:
                 output_buffer = io.BytesIO()
                 merger.write(output_buffer)
 
-                # --- 3. Create Safe Filename ---
-                safe_names = [re.sub(r'\W+', '', name) for name in pdf_names]
+                # --- 4. Safe Filename ---
+                safe_names = [re.sub(r'\W+', '', pdf.name.replace(".pdf", "")) for pdf in ordered_files]
                 unique_name = f"merged_{'_'.join(safe_names)}.pdf"
 
                 st.success("✅ Files merged successfully!")
 
-                # --- 4. Download Button ---
+                # --- 5. Download Button ---
                 st.download_button(
                     label="Download Merged PDF",
                     data=output_buffer.getvalue(),
@@ -61,56 +76,5 @@ if uploaded_files:
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-else:
-    st.info("Please upload one or more PDF files to begin.")            try:
-                # Append PDFs
-                for pdf in uploaded_files:
-                    reader = PdfReader(pdf)
-                    merger.append(reader)
-                
-                # Save merged PDF to memory
-                output_buffer = io.BytesIO()
-                merger.write(output_buffer)
-                
-                # --- 3. Create Safe Filename ---
-                safe_names = [re.sub(r'\W+', '', name) for name in pdf_names]
-                unique_name = f"merged_{'_'.join(safe_names)}.pdf"
-                
-                st.success("✅ Files merged successfully!")
-                
-                # --- 4. Download Button ---
-                st.download_button(
-                    label="Download Merged PDF",
-                    data=output_buffer.getvalue(),
-                    file_name=unique_name,
-                    mime="application/pdf"
-                )
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
-else:
-    st.info("Please upload one or more PDF files to begin.")                for pdf in uploaded_files:
-                    merger.append(pdf)
-                
-                # Create a buffer to store the PDF in memory
-                output_buffer = io.BytesIO()
-                merger.write(output_buffer)
-                merger.close()
-                
-                # 3. Create Unique Filename
-                # Format: merged_doc1_doc2_doc3.pdf
-                unique_name = f"merged_{'_'.join(pdf_names)}.pdf"
-                
-                st.success("✅ Files merged successfully!")
-                
-                # 4. Download Button
-                st.download_button(
-                    label="Download Merged PDF",
-                    data=output_buffer.getvalue(),
-                    file_name=unique_name,
-                    mime="application/pdf"
-                )
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
 else:
     st.info("Please upload one or more PDF files to begin.")
-  
